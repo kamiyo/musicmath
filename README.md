@@ -1,39 +1,23 @@
 # musicmath
 
-FIXME: Write a one-line description of your library/project.
+A demo of music and math (and programming)!
 
 ## Overview
 
-FIXME: Write a paragraph about the library/project and highlight its goals.
+Learning clojurescript and hopefully setup a demo about note frequencies and tuning incompatibilities.
 
 ## Setup
 
-To get an interactive development environment run:
+Get `lein`: [leiningen](https://leiningen.org/)
 
-    lein figwheel
+Once installed, run `lein repl` - the project.clj contains the deps and startup commands for running `figwheel` which compiles the .cljs files into .js and loads a server with hot-loading. The site is then usually accessible at `localhost:3449`.
 
-and open your browser at [localhost:3449](http://localhost:3449/).
-This will auto compile and send all changes to the browser without the
-need to reload. After the compilation process is complete, you will
-get a Browser Connected REPL. An easy way to try it is:
+Depending on what editor you use, you will have to look up how to incorporate clojure/clojurescript into your workflow.
 
-    (js/alert "Am I connected?")
 
-and you should see an alert in the browser window.
-
-To clean all compiled files:
-
-    lein clean
-
-To create a production build run:
-
-    lein do clean, cljsbuild once min
-
-And open your browser in `resources/public/index.html`. You will not
-get live reloading, nor a REPL.
 
 ## License
 
-Copyright © 2014 FIXME
+Copyright © 2018 Sean Chen (kamiyo)
 
-Distributed under the Eclipse Public License either version 1.0 or (at your option) any later version.
+Distributed under the Eclipse Public License 2.0.

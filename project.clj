@@ -1,8 +1,8 @@
 (defproject musicmath "0.1.0-SNAPSHOT"
-  :description "FIXME: write this!"
-  :url "http://example.com/FIXME"
-  :license {:name "Eclipse Public License"
-            :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :description "A demo of math and music."
+  :url "https://www.seanchenpiano.com"
+  :license {:name "Eclipse Public License 2.0"
+            :url "http://www.eclipse.org/org/documents/epl-2.0/EPL-2.0.html"}
 
   :min-lein-version "2.7.1"
 
