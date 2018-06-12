@@ -8,6 +8,8 @@ Learning clojurescript and hopefully setup a demo about note frequencies and tun
 
 ## Setup
 
+Setup clojure and clojurescript.
+
 Get `lein`: [leiningen](https://leiningen.org/)
 
 Once installed, run `lein repl` - the project.clj contains the deps and startup commands for running `figwheel` which compiles the .cljs files into .js and loads a server with hot-loading. The site is then usually accessible at `localhost:3449`.
