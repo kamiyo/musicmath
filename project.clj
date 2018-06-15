@@ -13,6 +13,7 @@
                  [re-frame "0.10.5"]
                  [cljsjs/material-ui "1.0.0-beta.40-0"]
                  [binaryage/devtools "0.9.10"]
+                 [spec-provider "0.4.14"]
                  [stylefy "1.6.0"]]
 
   :plugins [[lein-figwheel "0.5.16"]

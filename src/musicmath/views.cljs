@@ -3,8 +3,7 @@
             [reagent.core :as reagent]
             [re-frame.core :refer [subscribe dispatch]]
             [stylefy.core :as stylefy :refer [use-style]]
-            [musicmath.views.slider :refer [multiplier-slider]]
-            [musicmath.defs :refer [my-blue]])
+            [musicmath.slider :refer [slider-group-with-theme]])
   (:import [goog.events EventType]))
 
 (def theme
@@ -12,29 +11,50 @@
    (clj->js
     {:palette
      {:primary
-      {:main (:hex my-blue)}}})))
+      {:main (:200 (js->clj js/MaterialUI.colors.indigo :keywordize-keys true))}
+      :secondary
+      {:main (:200 (js->clj js/MaterialUI.colors.red :keywordize-keys true))}}
+     :overrides
+     {:MuiAppBar
+      {:root
+       {:userSelect "none"}}}})))
 
 (defn styles
   [theme]
-  (let [gutter-fn (-> theme .-mixins .-gutters)
-        spacing-unit (-> theme .-spacing .-unit)]
+  (let [spacing-unit (-> theme .-spacing .-unit)]
     (clj->js
-     {:root (gutter-fn (clj->js
-                 {:padding 16
-                  :margin (* 3 spacing-unit)}))})))
+     {:root {:margin (* 3 spacing-unit)}})))
 
-(defn paper-with-style
-  [children]
+(def paper-with-style
   (let [decorator (js/MaterialUIStyles.withStyles styles)]
-    [(reagent/adapt-react-class
-      (decorator js/MaterialUI.Paper))
-     children]))
+    (decorator js/MaterialUI.Paper)))
+
+(defn tone-container
+  [tone-id tone]
+  [(reagent/adapt-react-class paper-with-style) {:elevation 4}
+   [:div
+    [(reagent/adapt-react-class js/MaterialUI.AppBar)
+     {:position "static"
+      :color "primary"
+      :elevation 0}
+     [(reagent/adapt-react-class js/MaterialUI.Toolbar)
+      [(reagent/adapt-react-class js/MaterialUI.Typography)
+       {:variant "title"}
+       (str "Tone " (inc tone-id))]]]
+    (let [nodes @(subscribe [:get-nodes tone-id])]
+      (map-indexed
+       (fn [node-id node]
+         ^{:key (str "node-" tone-id "-" node-id)} [slider-group-with-theme tone-id node-id node])
+       nodes))]])
 
 (defn app
   []
   (let [my-theme theme
-        number-of-tones @(subscribe [:number-of-tones])]
-    [(reagent/adapt-react-class js/MaterialUIStyles.MuiThemeProvider) {:theme my-theme}
-     [paper-with-style
-      [(reagent/adapt-react-class js/MaterialUI.CssBaseline)
-      (for [idx (range number-of-tones)] ^{:key idx} [multiplier-slider idx])]]]))
+        tones @(subscribe [:get-tones])]
+    [:div {:style {:width "100%" :max-width "800px" :margin "auto"}}
+     [(reagent/adapt-react-class js/MaterialUI.CssBaseline)]
+     [(reagent/adapt-react-class js/MaterialUIStyles.MuiThemeProvider) {:theme my-theme}
+      (map-indexed
+       (fn [tone-id tone]
+         ^{:key (str "tone-" tone-id)} [tone-container tone-id tone])
+       tones)]]))

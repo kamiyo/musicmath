@@ -1,27 +1,35 @@
 (ns musicmath.subs
   (:require [re-frame.core :refer [reg-sub subscribe]]))
 
-(reg-sub
- :number-of-tones
- (fn [db _]
-   (count (:tones db))))
+(defn get-helper [tone-id node-id & keywords]
+  [:tones (int tone-id) :nodes (int node-id) keywords])
 
 (reg-sub
- :multiplier
- (fn [db idx]
-   (get-in db [:tones (int idx) :multiplier])))
+ :get-tones
+ (fn [db _]
+   (:tones db)))
+
+(reg-sub
+ :get-nodes
+ (fn [db tone-id]
+   (get-in db [:tones (int tone-id) :nodes])))
+
+(reg-sub
+ :number-of-nodes
+ (fn [db tone-id]
+   (count (get-in db [:tones (int tone-id) :nodes]))))
+
+(reg-sub
+ :value
+ (fn [db tone-id node-id]
+   (get-in db (get-helper tone-id node-id :value))))
 
 (reg-sub
  :input
- (fn [db idx]
-   (get-in db [:tones (int idx) :input])))
+ (fn [db tone-id node-id]
+   (get-in db (get-helper tone-id node-id :slider :input))))
 
 (reg-sub
  :dragging?
- (fn [db idx]
-   (get-in db [:tones (int idx) :dragging?])))
-
-(reg-sub
- :editing?
- (fn [db idx]
-   (get-in db [:tones (int idx) :editing?])))
+ (fn [db tone-id node-id]
+   (get-in db (get-helper tone-id node-id :slider :dragging?))))
