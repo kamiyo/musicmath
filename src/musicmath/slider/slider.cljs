@@ -1,6 +1,5 @@
 (ns musicmath.slider
   (:require [goog.events :as events]
-            [goog.object :refer [getValueByKeys]]
             [reagent.core :as reagent]
             [re-frame.core :refer [subscribe dispatch]]
             [stylefy.core :as stylefy :refer [use-style]]
@@ -27,8 +26,7 @@
 
 (defn drag-move-fn [on-drag]
   (fn [evt]
-    (let [target (.-target evt)]
-      (on-drag {:offsetX (.-clientX evt)}))))
+    (on-drag {:offsetX (.-clientX evt)})))
 
 (defn my-drag-move [{:keys [update-value min max width event]}]
   (let [dist (- max min)
@@ -110,7 +108,7 @@
 
 (defn num-display
   [props]
-  (let [{:keys [type value input sliderProps updateInput classes]} (js->clj props :keywordize-keys true)
+  (let [{:keys [type input sliderProps updateInput classes]} (js->clj props :keywordize-keys true)
         float-input (js/parseFloat input)
         n-min (js/parseFloat (:min sliderProps))
         n-max (js/parseFloat (:max sliderProps))
@@ -128,6 +126,7 @@
                :error error?
                :margin "normal"
                :value input
+               :InputProps      {:endAdornment (reagent/as-element [(reagent/adapt-react-class js/MaterialUI.InputAdornment) {:position "end"} "hz"])}
                :InputLabelProps {:style {:userSelect "none"}}
                :inputProps      {:style {:height     "20px"
                                          :width      "5rem"
@@ -136,44 +135,45 @@
                :onBlur #(when (= "" (-> % .-target .-value))
                           (updateInput (.toPrecision (js/Number. (-> % .-target .-value)) 6)))})]))
 
-(def num-display-with-style
-  (let [decorator (js/MaterialUIStyles.withStyles num-display-style)]
-    (reagent/adapt-react-class (decorator (reagent/reactify-component num-display)))))
-
 (defn slider-group
+  "Slider Group component. Since it is wrapped by Material withTheme, the props are js keys. Outer function makes num-display-with-style"
   [props]
-  (let [{:keys [tone-id node-id node theme]} props
-        clj-node     (js->clj node :keywordize-keys true)
-        type         (:type clj-node)
-        value        ((keyword type) clj-node)
-        slider-props (:slider clj-node)
-        input        (:input slider-props)
-        width        300
-        max-log      (js/Math.log2 (js/parseFloat (:max slider-props)))
-        min-log      (js/Math.log2 (js/parseFloat (:min slider-props)))
-        scale        (/ (- max-log min-log) width)
-        thumb-left   (value-to-log-position value min-log scale)
-        primary-dark (-> theme .-palette .-primary .-dark)
-        update-value (partial dispatch-update-value tone-id node-id)
-        update-input (partial dispatch-update-input tone-id node-id)
-        common-props {:value value
-                      :thumb-left thumb-left
-                      :slider-props slider-props
-                      :color primary-dark
-                      :update-value update-value
-                      :scale scale
-                      :min-log min-log}]
-    [:div.slider-container
-     (use-style (container-style (:dragging? slider-props)))
-     [slider (merge common-props {:width width})
-      [thumb (merge common-props {:key "thumb"})]
-      [:div.track-before (use-style (track-before-style thumb-left primary-dark) {:key "track-before"})]
-      [:div.track-after (use-style (track-after-style thumb-left width (:dragging? slider-props)) {:key "track-after"})]]
-     [num-display-with-style {:type         type
-                              :value        value
-                              :slider-props slider-props
-                              :input        input
-                              :update-input update-input}]]))
+  (let [decorator (js/MaterialUIStyles.withStyles num-display-style)
+        num-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component num-display)))]
+    (fn [props]
+      (let [{:keys [tone-id node-id node theme]} props
+            clj-node     (js->clj node :keywordize-keys true)
+            type         (:type clj-node)
+            value        ((keyword type) clj-node)
+            slider-props (:slider clj-node)
+            input        (:input slider-props)
+            width        300
+            max-log      (js/Math.log2 (js/parseFloat (:max slider-props)))
+            min-log      (js/Math.log2 (js/parseFloat (:min slider-props)))
+            dragging?    (:dragging? slider-props)
+            scale        (/ (- max-log min-log) width)
+            thumb-left   (value-to-log-position value min-log scale)
+            primary-dark (-> theme .-palette .-primary .-dark)
+            update-value (partial dispatch-update-value tone-id node-id)
+            update-input (partial dispatch-update-input tone-id node-id)
+            common-props {:value value
+                          :thumb-left thumb-left
+                          :slider-props slider-props
+                          :color primary-dark
+                          :update-value update-value
+                          :scale scale
+                          :min-log min-log}]
+        [:div.slider-container
+         (use-style (container-style dragging?))
+         [slider (merge common-props {:width width})
+          [thumb (merge common-props {:key "thumb"})]
+          [:div.track-before (use-style (track-before-style thumb-left primary-dark) {:key "track-before"})]
+          [:div.track-after (use-style (track-after-style thumb-left width dragging?) {:key "track-after"})]]
+         [num-display-with-style {:type         type
+                                  :value        value
+                                  :slider-props slider-props
+                                  :input        input
+                                  :update-input update-input}]]))))
 
 (defn slider-group-with-theme [tone-id node-id node]
   (let [sg (reagent/adapt-react-class

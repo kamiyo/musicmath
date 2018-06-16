@@ -90,28 +90,24 @@
 
              ;; to pipe all the output to the repl
              ;; :server-logfile false
-}
+  }
 
 
   ;; Setting up nREPL for Figwheel and ClojureScript dev
   ;; Please see:
   ;; (https://github.com/bhauman/lein-figwheel/wiki/Using-the-Figwheel-REPL-within-NRepl)
   :profiles {:dev {:dependencies [[binaryage/devtools "0.9.10"]
+                                  [org.clojure/tools.nrepl "0.2.13"]
                                   [figwheel-sidecar "0.5.16"]
                                   [cider/piggieback "0.3.6"]]
                    ;; need to add dev source path here to get user.clj loaded
                    :source-paths ["src" "dev"]
                    ;; for CIDER
-                   ;; :plugins [[cider/cider-nrepl "0.12.0"]]
-                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}
+                   :plugins [[cider/cider-nrepl "0.18.0-SNAPSHOT"]]
+                   :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]
+                                  :init (do
+                                          (use 'figwheel-sidecar.repl-api)
+                                          (start-figwheel!))}
                    ;; need to add the compliled assets to the :clean-targets
                    :clean-targets ^{:protect false} ["resources/public/js/compiled"
-                                                     :target-path]}
-             :repl {:plugins [[cider/cider-nrepl "0.18.0-SNAPSHOT"]]
-                    :dependencies [[org.clojure/tools.nrepl "0.2.13"]
-                                   [com.cemerick/piggieback "0.2.2"]
-                                   [figwheel-sidecar "0.5.16"]]
-                    :repl-options {:nrepl-middleware [cemerick.piggieback/wrap-cljs-repl]
-                                   :init (do
-                                           (use 'figwheel-sidecar.repl-api)
-                                           (start-figwheel!))}}})
+                                                     :target-path]}})

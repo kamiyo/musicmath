@@ -25,27 +25,26 @@
     (clj->js
      {:root {:margin (* 3 spacing-unit)}})))
 
-(def paper-with-style
-  (let [decorator (js/MaterialUIStyles.withStyles styles)]
-    (decorator js/MaterialUI.Paper)))
-
 (defn tone-container
   [tone-id tone]
-  [(reagent/adapt-react-class paper-with-style) {:elevation 4}
-   [:div
-    [(reagent/adapt-react-class js/MaterialUI.AppBar)
-     {:position "static"
-      :color "primary"
-      :elevation 0}
-     [(reagent/adapt-react-class js/MaterialUI.Toolbar)
-      [(reagent/adapt-react-class js/MaterialUI.Typography)
-       {:variant "title"}
-       (str "Tone " (inc tone-id))]]]
-    (let [nodes @(subscribe [:get-nodes tone-id])]
-      (map-indexed
-       (fn [node-id node]
-         ^{:key (str "node-" tone-id "-" node-id)} [slider-group-with-theme tone-id node-id node])
-       nodes))]])
+  (let [decorator (js/MaterialUIStyles.withStyles styles)
+        paper-with-style (decorator js/MaterialUI.Paper)]
+    (fn [tone-id tone]
+      [(reagent/adapt-react-class paper-with-style) {:elevation 4}
+       [:div
+        [(reagent/adapt-react-class js/MaterialUI.AppBar)
+         {:position "static"
+          :color "primary"
+          :elevation 0}
+         [(reagent/adapt-react-class js/MaterialUI.Toolbar)
+          [(reagent/adapt-react-class js/MaterialUI.Typography)
+           {:variant "title"}
+           (str "Tone " (inc tone-id))]]]
+        (let [nodes @(subscribe [:get-nodes tone-id])]
+          (map-indexed
+           (fn [node-id node]
+             ^{:key (str "node-" tone-id "-" node-id)} [slider-group-with-theme tone-id node-id node])
+           nodes))]])))
 
 (defn app
   []
