@@ -7,6 +7,7 @@
             [musicmath.views]
             [musicmath.events]
             [musicmath.subs]
+            [musicmath.defs]
             [stylefy.core :as stylefy]))
 
 ; (devtools/install!)

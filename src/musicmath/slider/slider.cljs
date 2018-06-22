@@ -7,7 +7,8 @@
                                              container-style
                                              slider-style
                                              track-before-style
-                                             track-after-style]])
+                                             track-after-style]]
+            [musicmath.defs :refer [closest-note-name cents-from-closest-note]])
   (:import [goog.events EventType]))
 
 (defn dispatch-update-value
@@ -135,6 +136,11 @@
                :onBlur #(when (= "" (-> % .-target .-value))
                           (updateInput (.toPrecision (js/Number. (-> % .-target .-value)) 6)))})]))
 
+(defn note-display
+  [props]
+  (let [{:keys [value]} (js->clj props :keywordize-keys true)]
+    ))
+
 (defn slider-group
   "Slider Group component. Since it is wrapped by Material withTheme, the props are js keys. Outer function makes num-display-with-style"
   [props]
@@ -173,7 +179,19 @@
                                   :value        value
                                   :slider-props slider-props
                                   :input        input
-                                  :update-input update-input}]]))))
+                                  :update-input update-input}]
+         [js/MaterialUI.TextField (clj->js {:label "note"
+                                            :type "text"
+                                            :value (closest-note-name value)
+                                            :helperText " "
+                                            :inputProps {:readonly true
+                                                         :style {:width "3rem"}}})]
+         [js/MaterialUI.TextField (clj->js {:label "cents"
+                                            :type "text"
+                                            :value  (cents-from-closest-note value)
+                                            :helperText " "
+                                            :inputProps {:readonly true
+                                                         :style {:width "3rem"}}})]]))))
 
 (defn slider-group-with-theme [tone-id node-id node]
   (let [sg (reagent/adapt-react-class
