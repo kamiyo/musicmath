@@ -8,7 +8,15 @@
                                              slider-style
                                              track-before-style
                                              track-after-style]]
-            [musicmath.defs :refer [closest-note-name cents-from-closest-note]])
+            [musicmath.defs :refer [closest-note
+                                    closest-note-name
+                                    closest-note-octave
+                                    cents-from-closest-note
+                                    freq-from-note
+                                    freq-from-note-name
+                                    half-step-down
+                                    half-step-up
+                                    note-map]])
   (:import [goog.events EventType]))
 
 (defn dispatch-update-value
@@ -86,7 +94,7 @@
 
 (defn slider
   [props & children]
-  (let [{:keys [thumb-left width min-log scale update-value]} props
+  (let [{:keys [thumb-left width min-log scale update-value value]} props
         scroll-amount (* .01 width)]
     [:div.slider
      (use-style
@@ -94,13 +102,13 @@
       {:on-wheel
        (fn [evt]
          (let
-          [dy   (.-deltaY evt)
-           d-fn (cond (pos? dy) #(- % scroll-amount)
-                      (neg? dy) #(+ % scroll-amount))]
-           (update-value (log-position-to-value (d-fn thumb-left) min-log scale))))})
+          [dy        (.-deltaY evt)
+           new-value (cond (pos? dy) (half-step-down value)
+                           (neg? dy) (half-step-up value))]
+           (update-value new-value)))})
      children]))
 
-(defn num-display-style
+(defn display-style
   [theme]
   (let [spacing-unit (-> theme .-spacing .-unit)]
     (clj->js
@@ -109,7 +117,7 @@
 
 (defn num-display
   [props]
-  (let [{:keys [type input sliderProps updateInput classes]} (js->clj props :keywordize-keys true)
+  (let [{:keys [type input value sliderProps updateInput updateValue classes]} (js->clj props :keywordize-keys true)
         float-input (js/parseFloat input)
         n-min (js/parseFloat (:min sliderProps))
         n-max (js/parseFloat (:max sliderProps))
@@ -133,19 +141,53 @@
                                          :width      "5rem"
                                          :display    "inline-block"}}
                :onChange #(updateInput (-> % .-target .-value))
-               :onBlur #(when (= "" (-> % .-target .-value))
-                          (updateInput (.toPrecision (js/Number. (-> % .-target .-value)) 6)))})]))
+               :onKeyPress #(let [key (-> % .-key)
+                                  new-value (-> % .-target .-value)]
+                              (if (= "Enter" key) (updateValue new-value)))
+               :onBlur #(updateValue (-> % .-target .-value))})]))
 
 (defn note-display
   [props]
-  (let [{:keys [value]} (js->clj props :keywordize-keys true)]
-    ))
+  (let [{:keys [noteName octave updateValue classes]} (js->clj props :keywordize-keys true)]
+    (js/console.log noteName)
+    [(reagent/adapt-react-class js/MaterialUI.TextField)
+     {:label "note"
+      :select true
+      :className (:textField classes)
+      :value noteName
+      :helperText " "
+      :margin "normal"
+      :onChange #(updateValue (freq-from-note-name (-> % .-target .-value) octave))
+      :SelectProps {:readOnly false
+                    :style {:width "7rem"}}}
+     (map-indexed (fn [idx note]
+                    ^{:key note} [(reagent/adapt-react-class js/MaterialUI.MenuItem) {:value note} note])
+                  note-map)]))
+
+(defn octave-display
+  [props]
+  (let [{:keys [octave note updateValue classes]} (js->clj props :keywordize-keys true)]
+    [js/MaterialUI.TextField
+     (clj->js {:label "8ve"
+               :type "number"
+               :className (:textField classes)
+               :value octave
+               :helperText " "
+               :margin "normal"
+               :onChange #(updateValue (let [val (-> % .-target .-value)
+                                             diff (* 12 (- val octave))
+                                             _ (js/console.log (+ note diff))]
+                                         (freq-from-note (+ note diff))))
+               :inputProps {:readOnly false
+                            :style {:width "2rem"}}})]))
 
 (defn slider-group
   "Slider Group component. Since it is wrapped by Material withTheme, the props are js keys. Outer function makes num-display-with-style"
   [props]
-  (let [decorator (js/MaterialUIStyles.withStyles num-display-style)
-        num-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component num-display)))]
+  (let [decorator (js/MaterialUI.withStyles display-style)
+        num-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component num-display)))
+        note-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component note-display)))
+        octave-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component octave-display)))]
     (fn [props]
       (let [{:keys [tone-id node-id node theme]} props
             clj-node     (js->clj node :keywordize-keys true)
@@ -162,13 +204,20 @@
             primary-dark (-> theme .-palette .-primary .-dark)
             update-value (partial dispatch-update-value tone-id node-id)
             update-input (partial dispatch-update-input tone-id node-id)
+            note         (closest-note value)
+            note-name    (closest-note-name value)
+            octave       (closest-note-octave value)
             common-props {:value value
+                          :note note
+                          :note-name note-name
+                          :octave octave
                           :thumb-left thumb-left
                           :slider-props slider-props
                           :color primary-dark
                           :update-value update-value
                           :scale scale
                           :min-log min-log}]
+        (js/console.log common-props)
         [:div.slider-container
          (use-style (container-style dragging?))
          [slider (merge common-props {:width width})
@@ -179,19 +228,17 @@
                                   :value        value
                                   :slider-props slider-props
                                   :input        input
-                                  :update-input update-input}]
-         [js/MaterialUI.TextField (clj->js {:label "note"
-                                            :type "text"
-                                            :value (closest-note-name value)
-                                            :helperText " "
-                                            :inputProps {:readonly true
-                                                         :style {:width "3rem"}}})]
+                                  :update-input update-input
+                                  :update-value update-value}]
+         [note-display-with-style common-props]
+         [octave-display-with-style common-props]
          [js/MaterialUI.TextField (clj->js {:label "cents"
                                             :type "text"
                                             :value  (cents-from-closest-note value)
+                                            :margin "normal"
                                             :helperText " "
-                                            :inputProps {:readonly true
-                                                         :style {:width "3rem"}}})]]))))
+                                            :inputProps {:readOnly false
+                                                         :style {:width "5rem"}}})]]))))
 
 (defn slider-group-with-theme [tone-id node-id node]
   (let [sg (reagent/adapt-react-class

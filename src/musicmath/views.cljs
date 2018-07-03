@@ -7,7 +7,7 @@
   (:import [goog.events EventType]))
 
 (def theme
-  (js/MaterialUIStyles.createMuiTheme
+  (js/MaterialUI.createMuiTheme
    (clj->js
     {:palette
      {:primary
@@ -27,7 +27,7 @@
 
 (defn tone-container
   [tone-id tone]
-  (let [decorator (js/MaterialUIStyles.withStyles styles)
+  (let [decorator (js/MaterialUI.withStyles styles)
         paper-with-style (decorator js/MaterialUI.Paper)]
     (fn [tone-id tone]
       [(reagent/adapt-react-class paper-with-style) {:elevation 4}
@@ -50,9 +50,9 @@
   []
   (let [my-theme theme
         tones @(subscribe [:get-tones])]
-    [:div {:style {:width "100%" :max-width "800px" :margin "auto"}}
+    [:div {:style {:width "100%" :max-width "1000px" :margin "auto"}}
      [(reagent/adapt-react-class js/MaterialUI.CssBaseline)]
-     [(reagent/adapt-react-class js/MaterialUIStyles.MuiThemeProvider) {:theme my-theme}
+     [(reagent/adapt-react-class js/MaterialUI.MuiThemeProvider) {:theme my-theme}
       (map-indexed
        (fn [tone-id tone]
          ^{:key (str "tone-" tone-id)} [tone-container tone-id tone])

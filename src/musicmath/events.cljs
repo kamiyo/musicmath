@@ -25,7 +25,8 @@
          curr-node (get-in db path)
          type (:type curr-node)
          slider (:slider curr-node)
-         clamped-value (min (js/parseFloat (:max slider)) (max (js/parseFloat (:min slider)) new-value))
+         parsed-new-value (js/parseFloat new-value)
+         clamped-value (min (js/parseFloat (:max slider)) (max (js/parseFloat (:min slider)) (if (js/isNaN parsed-new-value) ((keyword type) curr-node) parsed-new-value)))
          db-with-updated-input (update-in db (path-to-node tone-id node-id :slider) assoc :input (.toPrecision (js/Number. clamped-value) 6))]
      (js/console.log clamped-value)
      (if (= type :power) (update-in db-with-updated-input (path-to-node tone-id node-id :power) assoc :n clamped-value)
@@ -44,12 +45,5 @@
    (let [path (path-to-node tone-id node-id)
          curr-node (get-in db path)
          slider (:slider curr-node)
-         res (merge {:db (update-in db (path-to-node tone-id node-id :slider) assoc :input new-input)}
-                    (when (and
-                           (number? (js/parseFloat new-input))
-                           (let [float-input (js/parseFloat new-input)]
-                             (and
-                              (> float-input (:min slider))
-                              (< float-input (:max slider)))))
-                      {:dispatch [:update-value tone-id node-id (js/parseFloat new-input)]}))]
+         res {:db (update-in db (path-to-node tone-id node-id :slider) assoc :input new-input)}]
      res)))

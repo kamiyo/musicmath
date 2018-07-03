@@ -7,11 +7,11 @@
   :min-lein-version "2.7.1"
 
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.10.238"]
+                 [org.clojure/clojurescript "1.10.339"]
                  [org.clojure/core.async  "0.4.474"]
                  [reagent "0.8.1"]
                  [re-frame "0.10.5"]
-                 [cljsjs/material-ui "1.0.0-beta.40-0"]
+                 [cljsjs/material-ui "1.2.1-0"]
                  [binaryage/devtools "0.9.10"]
                  [spec-provider "0.4.14"]
                  [stylefy "1.6.0"]]

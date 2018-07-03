@@ -17,34 +17,34 @@
 (s/def ::n (s/and pos-int? #(<= % 12)))
 (s/def ::ratio_den double?)
 (s/def ::ratio_num double?)
-(s/def ::pitch (s/and number? pos? #(<= 8000)))
+(s/def ::frequency (s/and number? pos? #(<= 8000)))
 (s/def ::partial integer?)
 (s/def ::power (s/keys :req-un [::ratio_den ::ratio-num ::n]))
 (s/def ::volume double?)
-(s/def ::type #{:pitch :volume :partial :power})
-(s/def ::nodes (s/coll-of (s/keys :req-un [::slider ::type] :opt-un [::pitch ::partial ::power ::volume])))
+(s/def ::type #{:frequency :volume :partial :power})
+(s/def ::nodes (s/coll-of (s/keys :req-un [::slider ::type] :opt-un [::frequency ::partial ::power ::volume])))
 (s/def ::tones (s/coll-of (s/keys :req-un [::nodes])))
 (s/def
   ::db
   (s/keys :req-un [::tones]))
 
-(defn default-pitch-slider [pitch]
+(defn default-frequency-slider [frequency]
   {:dragging? false
-   :input (str pitch)
-   :max "8000"
-   :min "15"
+   :input (str frequency)
+   :max "7902.132820098001"
+   :min "15.43385316425384"
    :step "any"
    :bypass? false})
 
-(defn default-pitch-node [pitch]
-  {:type :pitch
-   :pitch pitch
-   :slider (default-pitch-slider pitch)})
+(defn default-frequency-node [frequency]
+  {:type :frequency
+   :frequency frequency
+   :slider (default-frequency-slider frequency)})
 
 (def default-db
   {:tones
    [{:nodes
-     [(default-pitch-node 440)]}]})
+     [(default-frequency-node 440)]}]})
 
 (defn path-to-node [tone-id node-id & fields]
   (if (nil? fields)
