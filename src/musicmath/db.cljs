@@ -27,7 +27,7 @@
   ::db
   (s/keys :req-un [::tones]))
 
-(defn default-frequency-slider [frequency]
+(defn default-frequency-slider []
   {:dragging? false
    :max (str max-freq)
    :min (str min-freq)
@@ -37,12 +37,25 @@
 (defn default-frequency-node [frequency]
   {:type :frequency
    :frequency frequency
-   :slider (default-frequency-slider frequency)})
+   :slider (default-frequency-slider)})
+
+(defn default-volume-slider []
+  {:dragging? false
+   :max "1.0"
+   :min "0.0"
+   :step "0.1"
+   :bypass? false})
+
+(defn default-volume-node [volume]
+  {:type :volume
+   :volume volume
+   :slider (default-volume-slider)})
 
 (def default-db
   {:tones
    [{:nodes
-     [(default-frequency-node 440.000)]}]})
+     [(default-frequency-node 440.000)
+      (default-volume-node 1.0)]}]})
 
 (defn path-to-node [tone-id node-id & fields]
   (if (nil? fields)

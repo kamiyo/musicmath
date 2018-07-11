@@ -17,15 +17,14 @@
 (defn ^:export main
   []
   (stylefy/init {:global-vendor-prefixes {::stylefy/vendors ["webkit" "moz" "o"]
-                                        ::stylefy/auto-prefix #{:border-radius :box-shadow :appearance}}})
+                                          ::stylefy/auto-prefix #{:border-radius :box-shadow :appearance}}})
   (dispatch-sync [:initialize-db])
   (reagent/render [musicmath.views/app]
                   (.getElementById js/document "app")))
 
 (defn on-js-reload
   []
-  ; (js/console.log js/MaterialUI)
   (stylefy/init {:global-vendor-prefixes {::stylefy/vendors ["webkit" "moz" "o"]
-                                        ::stylefy/auto-prefix #{:border-radius :box-shadow :appearance}}})
+                                          ::stylefy/auto-prefix #{:border-radius :box-shadow :appearance}}})
   (dispatch-sync [:initialize-db])
   (main))

@@ -1,6 +1,7 @@
 (ns musicmath.slider
   (:require [goog.events :as events]
             [reagent.core :as r]
+            [clojure.string :refer [capitalize]]
             [re-frame.core :refer [subscribe dispatch]]
             [stylefy.core :as stylefy :refer [use-style]]
             [musicmath.slider.styles :refer [thumb-style
@@ -238,8 +239,8 @@
                     (swap! r-state assoc :temp nil)
                     (updateValue (freq-from-note note (-> ev .-target .-value))))}]))))
 
-(defn slider-group
-  "Slider Group component. Since it is wrapped by Material withTheme, the props are js keys. Outer function makes num-display-with-style"
+(defn frequency-group
+  "Frequency Group component. Since it is wrapped by Material withTheme, the props are js keys. Outer function makes num-display-with-style"
   [props]
   (let [decorator (js/MaterialUI.withStyles display-style)
         num-display-with-style (r/adapt-react-class (decorator (r/reactify-component num-display)))
@@ -277,6 +278,7 @@
                           :min-log min-log}]
         [:div.slider-container
          (use-style (container-style dragging?))
+         [(r/adapt-react-class js/MaterialUI.Typography) {:variant "headline"} (str (capitalize type) ":")]
          [slider (merge common-props {:width width})
           [thumb (merge common-props {:key "thumb"})]
           [:div.track-before (use-style (track-before-style thumb-left primary-dark) {:key "track-before"})]
@@ -289,12 +291,31 @@
          [octave-display-with-style common-props]
          [cents-display-with-style common-props]]))))
 
+(defn volume-group
+  [props]
+  (let [decorator (js/MaterialUI.withStyles display-style)
+        num-display-with-style (r/adapt-react-class (decorator (r/reactify-component num-display)))]
+    (fn [props]
+      (let [{:keys [tone-id node-id node theme]} props
+            clj-node     (js->clj node :keywordize-keys true)
+            type         (:type clj-node)
+            value        ((keyword type) clj-node)
+            slider-props (:slider clj-node)
+            width        300
+            dragging?    (:dragging? slider-props)]
+        [:div
+         (use-style (container-style dragging?))
+         [(r/adapt-react-class js/MaterialUI.Typography) {:variant "headline"} (str (capitalize type) ":")]]))))
+
 (defn slider-group-with-theme [tone-id node-id node]
-  (let [sg (r/adapt-react-class
-            ((js/MaterialUI.withTheme)
-             (r/reactify-component slider-group)))]
+  (let [fg (r/adapt-react-class ((js/MaterialUI.withTheme) (r/reactify-component frequency-group)))
+        vg (r/adapt-react-class ((js/MaterialUI.withTheme) (r/reactify-component volume-group)))]
     (fn [tone-id node-id node]
-      [sg {:toneid tone-id :node-id node-id :node node}])))
+      (js/console.log (:type node))
+      (condp = (:type node)
+        :frequency [fg {:toneid tone-id :node-id node-id :node node}]
+        :volume [vg {:toneid tone-id :node-id node-id :node node}]
+        ()))))
 
 (defn multiplier-slider
   [])

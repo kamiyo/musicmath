@@ -5,8 +5,8 @@
 (def note-map ["C" "C#/Db" "D" "D#/Eb" "E" "F" "F#/Gb" "G" "G#/Ab" "A" "A#/Bb" "B"])
 
 (defn clamp
-  [value min max]
-  (min (max value min) max))
+  [value mn mx]
+  (min (max value mn) mx))
 
 (def max-freq (* 440 (js/Math.pow 2 (/ (- 108 49) 12))))
 
