@@ -1,16 +1,15 @@
 (ns musicmath.db
   (:require [cljs.spec.alpha :as s]
+            [musicmath.defs :refer [max-freq min-freq]]
             [re-frame.core :as rf]))
 
 (s/def ::bypass? boolean?)
-(s/def ::input string?)
 (s/def ::dragging? boolean?)
 (s/def ::max #(number? (int %)))
 (s/def ::min #(number? (int %)))
 (s/def ::step (or #(number? (int %)) #(= "any" %)))
 (s/def ::slider (s/keys :req-un [::bypass?
                                  ::dragging?
-                                 ::input
                                  ::max
                                  ::min
                                  ::step]))
@@ -30,9 +29,8 @@
 
 (defn default-frequency-slider [frequency]
   {:dragging? false
-   :input (str frequency)
-   :max "7902.132820098001"
-   :min "15.43385316425384"
+   :max (str max-freq)
+   :min (str min-freq)
    :step "any"
    :bypass? false})
 
@@ -44,7 +42,7 @@
 (def default-db
   {:tones
    [{:nodes
-     [(default-frequency-node 440)]}]})
+     [(default-frequency-node 440.000)]}]})
 
 (defn path-to-node [tone-id node-id & fields]
   (if (nil? fields)

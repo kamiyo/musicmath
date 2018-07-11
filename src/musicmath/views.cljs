@@ -3,7 +3,8 @@
             [reagent.core :as reagent]
             [re-frame.core :refer [subscribe dispatch]]
             [stylefy.core :as stylefy :refer [use-style]]
-            [musicmath.slider :refer [slider-group-with-theme]])
+            [musicmath.slider :refer [slider-group-with-theme]]
+            [material-ui])
   (:import [goog.events EventType]))
 
 (def theme

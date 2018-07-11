@@ -1,7 +1,8 @@
 (ns musicmath.events
-  (:require [re-frame.core :refer [reg-event-db reg-event-fx after]]
+  (:require [re-frame.core   :refer [reg-event-db reg-event-fx after]]
             [cljs.spec.alpha :as s]
-            [musicmath.db :refer [default-db path-to-node]]))
+            [musicmath.db    :refer [default-db path-to-node]]
+            [musicmath.defs  :refer [clamp]]))
 
 (defn check-and-throw
   "Checks db against spec"
@@ -21,14 +22,16 @@
  :update-value
  [check-spec-interceptor]
  (fn [db [_ tone-id node-id new-value]]
-   (let [path (path-to-node tone-id node-id)
-         curr-node (get-in db path)
-         type (:type curr-node)
-         slider (:slider curr-node)
-         parsed-new-value (js/parseFloat new-value)
-         clamped-value (min (js/parseFloat (:max slider)) (max (js/parseFloat (:min slider)) (if (js/isNaN parsed-new-value) ((keyword type) curr-node) parsed-new-value)))
+   (let [path                  (path-to-node tone-id node-id)
+         curr-node             (get-in db path)
+         type                  (:type curr-node)
+         slider                (:slider curr-node)
+         parsed-new-value      (js/parseFloat new-value)
+         clamped-value         (clamp
+                                (if (js/isNaN parsed-new-value) ((keyword type) curr-node) parsed-new-value)
+                                (js/parseFloat (:min slider))
+                                (js/parseFloat (:max slider)))
          db-with-updated-input (update-in db (path-to-node tone-id node-id :slider) assoc :input (.toPrecision (js/Number. clamped-value) 6))]
-     (js/console.log clamped-value)
      (if (= type :power) (update-in db-with-updated-input (path-to-node tone-id node-id :power) assoc :n clamped-value)
          (update-in db-with-updated-input path assoc type clamped-value)))))
 
@@ -37,13 +40,3 @@
  [check-spec-interceptor]
  (fn [db [_ is-dragging idx]]
    (update-in db [:tones (int idx)] assoc :is-dragging? is-dragging)))
-
-(reg-event-fx
- :update-input
- [check-spec-interceptor]
- (fn [{:keys [db]} [_ tone-id node-id new-input]]
-   (let [path (path-to-node tone-id node-id)
-         curr-node (get-in db path)
-         slider (:slider curr-node)
-         res {:db (update-in db (path-to-node tone-id node-id :slider) assoc :input new-input)}]
-     res)))

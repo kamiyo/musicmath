@@ -4,6 +4,14 @@
 
 (def note-map ["C" "C#/Db" "D" "D#/Eb" "E" "F" "F#/Gb" "G" "G#/Ab" "A" "A#/Bb" "B"])
 
+(defn clamp
+  [value min max]
+  (min (max value min) max))
+
+(def max-freq (* 440 (js/Math.pow 2 (/ (- 108 49) 12))))
+
+(def min-freq (* 440 (js/Math.pow 2 (/ (- -9 49) 12))))
+
 (defn index-of-note-name
   [note]
   (first (keep-indexed #(when (= note %2) %1) note-map)))
@@ -35,20 +43,22 @@
     (/ freq ratio)))
 
 (defn freq-from-note
-  [note]
-  (* 440 (js/Math.pow 2 (/ (- note 49) 12))))
+  ([note]
+   (* 440 (js/Math.pow 2 (/ (- note 49) 12))))
+  ([note cents]
+   (* 440 (js/Math.pow 2 (+ (/ cents 1200) (/ (- note 49) 12))))))
 
 (defn freq-from-note-name
-  [name octave]
-  (js/console.log name octave)
-  (js/console.log (index-of-note-name name))
-  (* 440 (js/Math.pow 2 (/ (- (+ 40 (index-of-note-name name)) (* 12 (- 4 octave)) 49) 12))))
+  ([name octave]
+   (* 440 (js/Math.pow 2 (/ (- (+ 40 (index-of-note-name name)) (* 12 (- 4 octave)) 49) 12))))
+  ([name octave cents]
+   (* 440 (js/Math.pow 2 (+ (/ cents 1200) (/ (- (+ 40 (index-of-note-name name)) (* 12 (- 4 octave)) 49) 12))))))
 
 (defn cents [a b]
   (cond
-    (< a b) (str "+" (.toFixed (js/Number. (* 1200 (js/Math.log2 (/ b a)))) 3))
-    (> a b) (str "-" (.toFixed (js/Number. (* 1200 (js/Math.log2 (/ a b)))) 3))
-    (= a b) "+0.000"))
+    (< a b) (* 1200 (js/Math.log2 (/ b a)))
+    (> a b) (* -1200 (js/Math.log2 (/ a b)))
+    (= a b) 0.0))
 
 (defn cents-from-closest-note [pitch]
   (cents (freq-from-note (closest-note pitch)) pitch))

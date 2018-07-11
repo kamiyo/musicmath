@@ -1,6 +1,6 @@
 (ns musicmath.slider
   (:require [goog.events :as events]
-            [reagent.core :as reagent]
+            [reagent.core :as r]
             [re-frame.core :refer [subscribe dispatch]]
             [stylefy.core :as stylefy :refer [use-style]]
             [musicmath.slider.styles :refer [thumb-style
@@ -23,23 +23,18 @@
   [tone-id node-id value]
   (dispatch [:update-value tone-id node-id value]))
 
-(defn dispatch-update-input
-  [tone-id node-id value]
-  (dispatch [:update-input tone-id node-id value]))
-
 (defn log-position-to-value [x min-log scale]
-  (js/Math.pow 2 (+ (* scale x) min-log)))
+  (js/Math.pow 2 (-> x (* scale) (+ min-log))))
 
 (defn value-to-log-position [val min-log scale]
-  (/ (- (js/Math.log2 val) min-log) scale))
+  (-> (js/Math.log2 val) (- min-log) (/ scale)))
 
 (defn drag-move-fn [on-drag]
   (fn [evt]
     (on-drag {:offsetX (.-clientX evt)})))
 
 (defn my-drag-move [{:keys [update-value min max width event]}]
-  (let [dist (- max min)
-        offset (/ width dist)
+  (let [offset (->> min (- max) (/ width))
         slider-left (-> event .-nativeEvent .-target .-parentElement .-offsetLeft)]
     (fn [{:keys [offsetX]}]
       (let [x (- offsetX slider-left)
@@ -112,89 +107,151 @@
   [theme]
   (let [spacing-unit (-> theme .-spacing .-unit)]
     (clj->js
-     {:textField {:marginLeft spacing-unit
+     {:textField {:marginLeft  spacing-unit
                   :marginRight spacing-unit}})))
 
 (defn num-display
   [props]
-  (let [{:keys [type input value sliderProps updateInput updateValue classes]} (js->clj props :keywordize-keys true)
-        float-input (js/parseFloat input)
-        n-min (js/parseFloat (:min sliderProps))
-        n-max (js/parseFloat (:max sliderProps))
-        error? (or (js/isNaN float-input) (> n-min float-input) (< n-max float-input))]
-    [js/MaterialUI.TextField
-     (clj->js {:label (if error? "error" (name type))
-               :name (name type)
-               :className (:textField classes)
-               :fullWidth false
-               :type "number"
-               :min (:min sliderProps)
-               :max (:max sliderProps)
-               :helperText (if error? "15 < n < 8000" " ")
-               :step "1"
-               :error error?
-               :margin "normal"
-               :value input
-               :InputProps      {:endAdornment (reagent/as-element [(reagent/adapt-react-class js/MaterialUI.InputAdornment) {:position "end"} "hz"])}
-               :InputLabelProps {:style {:userSelect "none"}}
-               :inputProps      {:style {:height     "20px"
-                                         :width      "5rem"
-                                         :display    "inline-block"}}
-               :onChange #(updateInput (-> % .-target .-value))
-               :onKeyPress #(let [key (-> % .-key)
-                                  new-value (-> % .-target .-value)]
-                              (if (= "Enter" key) (updateValue new-value)))
-               :onBlur #(updateValue (-> % .-target .-value))})]))
+  (let [state   (atom   {:edited? false})
+        r-state (r/atom {:temp    nil
+                         :error?  false})]
+    (fn [props]
+      (let [{:keys [type value updateValue]
+             {:keys [textField]} :classes
+             {:keys [min max]}   :sliderProps} (js->clj props :keywordize-keys true)
+            name                               (name type)]
+        [(r/adapt-react-class js/MaterialUI.TextField)
+         {:label      name
+          :name       name
+          :className  textField
+          :fullWidth  false
+          :type       "number"
+          :min        min
+          :max        max
+          :helperText (if (:error? @r-state) "error" " ")
+          :step       "1"
+          :error      (:error? @r-state)
+          :margin     "normal"
+          :value      (or (:temp @r-state) (-> value js/Number. (.toFixed 3)))
+          :InputProps      {:endAdornment (r/as-element
+                                           [(r/adapt-react-class js/MaterialUI.InputAdornment) {:position "end"} "hz"])}
+          :InputLabelProps {:style {:userSelect "none"}}
+          :inputProps      {:style {:height     "20px"
+                                    :width      "6rem"
+                                    :display    "inline-block"}}
+          :onChange   (fn [ev]
+                        (let [new-value (-> ev .-target .-value)]
+                          (if (true? (:edited? @state))
+                            ((fn []
+                               (swap! r-state assoc :temp new-value :error? (js/isNaN (js/parseFloat new-value)))
+                               (swap! state assoc :edited? false)))
+                            ((fn []
+                               (swap! r-state assoc :temp nil :error? false)
+                               (updateValue new-value))))))
+          :onKeyDown  (fn [ev]
+                        (let [key       (.-key ev)
+                              new-value (-> ev .-target .-value)
+                              set-edit  (swap! state assoc :edited? true)]
+                          (condp re-matches key
+                            #"Enter" :>> (fn [_]
+                                           (swap! r-state assoc :temp nil)
+                                           (updateValue new-value))
+                            #"([0-9.]*)" :>> #(set-edit)
+                            #"Backspace" :>> #(set-edit)
+                            #"Delete"    :>> #(set-edit)
+                            ())))
+          :onBlur     (fn [ev]
+                        (swap! r-state assoc :temp nil)
+                        (updateValue (-> ev .-target .-value)))}]))))
 
 (defn note-display
   [props]
-  (let [{:keys [noteName octave updateValue classes]} (js->clj props :keywordize-keys true)]
-    (js/console.log noteName)
-    [(reagent/adapt-react-class js/MaterialUI.TextField)
-     {:label "note"
-      :select true
-      :className (:textField classes)
-      :value noteName
-      :helperText " "
-      :margin "normal"
-      :onChange #(updateValue (freq-from-note-name (-> % .-target .-value) octave))
+  (let [{:keys [noteName cents octave updateValue]
+         {:keys [textField]} :classes} (js->clj props :keywordize-keys true)]
+    [(r/adapt-react-class js/MaterialUI.TextField)
+     {:label       "note"
+      :select      true
+      :className   textField
+      :value       noteName
+      :helperText  " "
+      :margin      "normal"
+      :onChange    #(updateValue (freq-from-note-name (-> % .-target .-value) octave cents))
       :SelectProps {:readOnly false
-                    :style {:width "7rem"}}}
+                    :style    {:width "7rem"}}}
      (map-indexed (fn [idx note]
-                    ^{:key note} [(reagent/adapt-react-class js/MaterialUI.MenuItem) {:value note} note])
+                    ^{:key note} [(r/adapt-react-class js/MaterialUI.MenuItem) {:value note} note])
                   note-map)]))
 
 (defn octave-display
   [props]
-  (let [{:keys [octave note updateValue classes]} (js->clj props :keywordize-keys true)]
-    [js/MaterialUI.TextField
-     (clj->js {:label "8ve"
-               :type "number"
-               :className (:textField classes)
-               :value octave
-               :helperText " "
-               :margin "normal"
-               :onChange #(updateValue (let [val (-> % .-target .-value)
-                                             diff (* 12 (- val octave))
-                                             _ (js/console.log (+ note diff))]
-                                         (freq-from-note (+ note diff))))
-               :inputProps {:readOnly false
-                            :style {:width "2rem"}}})]))
+  (let [{:keys [octave note cents updateValue classes]} (js->clj props :keywordize-keys true)]
+    [(r/adapt-react-class js/MaterialUI.TextField)
+     {:label "8ve"
+      :type "number"
+      :className (:textField classes)
+      :value octave
+      :helperText " "
+      :margin "normal"
+      :onChange #(updateValue (let [val (-> % .-target .-value)
+                                    diff (* 12 (- val octave))]
+                                (freq-from-note (+ note diff) cents)))
+      :inputProps {:readOnly false
+                   :style {:width "2rem"}}}]))
+
+(defn cents-display
+  [props]
+  (let [state (atom {:edited? false})
+        r-state (r/atom {:temp nil
+                         :error? false})]
+    (fn [props]
+      (let [{:keys [note cents updateValue classes]} (js->clj props :keywordize-keys true)]
+        [(r/adapt-react-class js/MaterialUI.TextField)
+         {:label "cents"
+          :type "number"
+          :className (:textField classes)
+          :value (if (some? (:temp @r-state)) (:temp @r-state) (.toFixed (js/Number. cents) 3))
+          :helperText " "
+          :margin "normal"
+          :inputProps {:readOnly false
+                       :style {:width "5rem"}}
+          :onChange (fn [ev]
+                      (let [new-value (-> ev .-target .-value)]
+                        (if (true? (:edited? @state))
+                          ((fn []
+                             (swap! r-state assoc :temp new-value :error? (js/isNaN (js/parseFloat new-value)))
+                             (swap! state assoc :edited? false)))
+                          ((fn []
+                             (swap! r-state assoc :temp nil :error? false)
+                             (updateValue (freq-from-note note new-value)))))))
+          :onKeyDown (fn [ev]
+                       (let [key (-> ev .-key)
+                             new-value (-> ev .-target .-value)]
+                         (condp re-matches key
+                           #"Enter" :>> (fn [ev]
+                                          (swap! r-state assoc :temp nil)
+                                          (updateValue (freq-from-note note new-value)))
+                           #"([0-9.+-]*)" :>> #(swap! state assoc :edited? true)
+                           #"Backspace" :>> #(swap! state assoc :edited? true)
+                           #"Delete" :>> #(swap! state assoc :edited? true)
+                           ())))
+          :onBlur (fn [ev]
+                    (swap! r-state assoc :temp nil)
+                    (updateValue (freq-from-note note (-> ev .-target .-value))))}]))))
 
 (defn slider-group
   "Slider Group component. Since it is wrapped by Material withTheme, the props are js keys. Outer function makes num-display-with-style"
   [props]
   (let [decorator (js/MaterialUI.withStyles display-style)
-        num-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component num-display)))
-        note-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component note-display)))
-        octave-display-with-style (reagent/adapt-react-class (decorator (reagent/reactify-component octave-display)))]
+        num-display-with-style (r/adapt-react-class (decorator (r/reactify-component num-display)))
+        note-display-with-style (r/adapt-react-class (decorator (r/reactify-component note-display)))
+        octave-display-with-style (r/adapt-react-class (decorator (r/reactify-component octave-display)))
+        cents-display-with-style (r/adapt-react-class (decorator (r/reactify-component cents-display)))]
     (fn [props]
       (let [{:keys [tone-id node-id node theme]} props
             clj-node     (js->clj node :keywordize-keys true)
             type         (:type clj-node)
             value        ((keyword type) clj-node)
             slider-props (:slider clj-node)
-            input        (:input slider-props)
             width        300
             max-log      (js/Math.log2 (js/parseFloat (:max slider-props)))
             min-log      (js/Math.log2 (js/parseFloat (:min slider-props)))
@@ -203,21 +260,21 @@
             thumb-left   (value-to-log-position value min-log scale)
             primary-dark (-> theme .-palette .-primary .-dark)
             update-value (partial dispatch-update-value tone-id node-id)
-            update-input (partial dispatch-update-input tone-id node-id)
             note         (closest-note value)
             note-name    (closest-note-name value)
             octave       (closest-note-octave value)
+            cents        (cents-from-closest-note value)
             common-props {:value value
                           :note note
                           :note-name note-name
                           :octave octave
+                          :cents cents
                           :thumb-left thumb-left
                           :slider-props slider-props
                           :color primary-dark
                           :update-value update-value
                           :scale scale
                           :min-log min-log}]
-        (js/console.log common-props)
         [:div.slider-container
          (use-style (container-style dragging?))
          [slider (merge common-props {:width width})
@@ -227,23 +284,15 @@
          [num-display-with-style {:type         type
                                   :value        value
                                   :slider-props slider-props
-                                  :input        input
-                                  :update-input update-input
                                   :update-value update-value}]
          [note-display-with-style common-props]
          [octave-display-with-style common-props]
-         [js/MaterialUI.TextField (clj->js {:label "cents"
-                                            :type "text"
-                                            :value  (cents-from-closest-note value)
-                                            :margin "normal"
-                                            :helperText " "
-                                            :inputProps {:readOnly false
-                                                         :style {:width "5rem"}}})]]))))
+         [cents-display-with-style common-props]]))))
 
 (defn slider-group-with-theme [tone-id node-id node]
-  (let [sg (reagent/adapt-react-class
+  (let [sg (r/adapt-react-class
             ((js/MaterialUI.withTheme)
-             (reagent/reactify-component slider-group)))]
+             (r/reactify-component slider-group)))]
     (fn [tone-id node-id node]
       [sg {:toneid tone-id :node-id node-id :node node}])))
 
